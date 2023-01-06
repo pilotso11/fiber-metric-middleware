@@ -38,7 +38,7 @@ app.Use(expvarmw.New())   // Recommended if you use metric with expvar
 app.Use(metricmware.New())
 
 expvar.Publish("mycounter", metric.NewCounter("5m1s", "15m30s", "1h1m"))
-expvar.Publish("mystat", metric.NewGauge("30m1m", "5h5m"))
+expvar.Publish("mystat", metric.NewGauge("30m1m", "15m30s", "1h1m"))
 expvar.Publish("mylatency", metric.NewHistogram("5m1s", "15m30s", "1h1m"))
 
 _ = app.Listen("127.0.0.1:8000")
@@ -52,7 +52,5 @@ starTime := time.Now()
 // Do some work
 expvar.Get("mylatency").(metric.Metric).Add(time.Since(startTime).Seconds())
 ```
-
-# Thanks
 
 
