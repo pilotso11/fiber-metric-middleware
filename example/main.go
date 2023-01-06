@@ -24,45 +24,66 @@ package main
 
 import (
 	"expvar"
+	"flag"
+	"math/rand"
+	"time"
+
 	"github.com/gofiber/fiber/v2"
 	expvarmw "github.com/gofiber/fiber/v2/middleware/expvar"
 	"github.com/pilotso11/metricmware"
 	"github.com/zserge/metric"
-	"math/rand"
-	"time"
 )
 
+var metrics = make(map[string]metric.Metric)
+
 func main() {
+	useExpvar := flag.Bool("e", false, "Use expvar")
+	flag.Parse()
+
 	app := fiber.New()
 
 	// Register the middleware
-	app.Use(metricmware.New())
-	app.Use(expvarmw.New())
+	app.Use(metricmware.New(metricmware.Config{Exposed: &metrics}))
+	if *useExpvar {
+		app.Use(expvarmw.New())
+	}
 
 	// Add my static page
 	app.Static("/", "./public")
 
 	// Create the metrics
-	expvar.Publish("my_counter", metric.NewCounter("5m1s", "15m30s", "1h1m"))
-	expvar.Publish("my_stat", metric.NewGauge("5m1s", "15m30s", "1h1m"))
-	expvar.Publish("my_latency", metric.NewHistogram("5m1s", "15m30s", "1h1m"))
+	if *useExpvar {
+		expvar.Publish("my_counter", metric.NewCounter("5m1s", "15m30s", "1h1m"))
+		expvar.Publish("my_stat", metric.NewGauge("5m1s", "15m30s", "1h1m"))
+		expvar.Publish("my_latency", metric.NewHistogram("5m1s", "15m30s", "1h1m"))
+	} else {
+		metrics["my_counter"] = metric.NewCounter("5m1s", "15m30s", "1h1m")
+		metrics["my_stat"] = metric.NewGauge("5m1s", "15m30s", "1h1m")
+		metrics["my_latency"] = metric.NewHistogram("5m1s", "15m30s", "1h1m")
+
+	}
 
 	// Start the random generator
-	go randomStatsGenerator()
+	go randomStatsGenerator(*useExpvar)
 
 	_ = app.Listen("127.0.0.1:8000")
 }
 
-func randomStatsGenerator() {
+func randomStatsGenerator(useExpVar bool) {
 	for {
 		start := time.Now()
-		expvar.Get("my_counter").(metric.Metric).Add(1) // Increase counter each loop
-
-		increment := rand.Float64() * 50
-		expvar.Get("my_stat").(metric.Metric).Add(increment) // Increase counter each loop
-
 		delay := rand.Intn(500 * int(time.Millisecond))
 		time.Sleep(time.Duration(delay))
-		expvar.Get("my_latency").(metric.Metric).Add(time.Since(start).Seconds()) // Increase counter each loop
+		increment := rand.Float64() * 50
+
+		if useExpVar {
+			expvar.Get("my_counter").(metric.Metric).Add(1)                           // Increase counter each loop
+			expvar.Get("my_stat").(metric.Metric).Add(increment)                      // Increase counter each loop
+			expvar.Get("my_latency").(metric.Metric).Add(time.Since(start).Seconds()) // Increase counter each loop
+		} else {
+			metrics["my_counter"].Add(1)                           // Increase counter each loop
+			metrics["my_stat"].Add(increment)                      // Increase counter each loop
+			metrics["my_latency"].Add(time.Since(start).Seconds()) // Increase counter each loop
+		}
 	}
 }

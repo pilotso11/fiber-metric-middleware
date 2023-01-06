@@ -1,6 +1,9 @@
 package metricmware
 
-import "github.com/gofiber/fiber/v2"
+import (
+	"github.com/gofiber/fiber/v2"
+	"github.com/zserge/metric"
+)
 
 /*
  * Copyright (c) 2023. Seth Osher.  All Rights Reserved.
@@ -36,6 +39,9 @@ type Config struct {
 	//
 	// Optional. Default: ""
 	Prefix string
+
+	// Optional metrics to expose, if not specified it will take all Metric from expvar
+	Exposed *map[string]metric.Metric
 }
 
 var ConfigDefault = Config{

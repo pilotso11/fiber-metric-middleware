@@ -23,15 +23,16 @@ package metricmware
  */
 
 import (
+	"strings"
+
 	"github.com/gofiber/fiber/v2"
 	"github.com/valyala/fasthttp/fasthttpadaptor"
 	"github.com/zserge/metric"
-	"strings"
 )
 
-var (
-	metricHandler = fasthttpadaptor.NewFastHTTPHandlerFunc(metric.Handler(metric.Exposed).ServeHTTP)
-)
+func (cfg *Config) exposed() map[string]metric.Metric {
+	return *cfg.Exposed
+}
 
 // New creates a new metrics middleware under [prefix]/debug/metrics using the prefix from config if specified
 func New(config ...Config) fiber.Handler {
@@ -50,7 +51,11 @@ func New(config ...Config) fiber.Handler {
 		}
 		switch path {
 		case cfg.Prefix + "/debug/metrics", cfg.Prefix + "/debug/metrics/":
-			metricHandler(c.Context())
+			if cfg.Exposed != nil {
+				fasthttpadaptor.NewFastHTTPHandlerFunc(metric.Handler(cfg.exposed).ServeHTTP)(c.Context())
+			} else {
+				fasthttpadaptor.NewFastHTTPHandlerFunc(metric.Handler(metric.Exposed).ServeHTTP)(c.Context())
+			}
 		default:
 			return c.Redirect("/debug/metrics", fiber.StatusFound)
 		}
